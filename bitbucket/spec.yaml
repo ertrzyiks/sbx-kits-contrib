@@ -1,0 +1,79 @@
+schemaVersion: "2"
+kind: mixin
+name: bitbucket
+displayName: Bitbucket
+description: Mixin kit that wires up personal access token (PAT) auth for Bitbucket REST API and git HTTPS operations, so agents can work with Bitbucket repositories and workspaces through authenticated requests.
+
+permissions:
+  network:
+    allow:
+      # Bitbucket API traffic and git HTTPS
+      - api.bitbucket.org:443
+      - bitbucket.org:443
+
+credentials:
+  - service: bitbucket
+    description: Bitbucket personal access token (repositories, pipelines, and workspaces scopes). Stored on the host; the sandbox only sees a placeholder and the proxy injects the real value on requests to bitbucket.org.
+    required: true
+    apiKey:
+      # Set BITBUCKET_TOKEN in the container as a proxy-managed placeholder.
+      # The proxy replaces the Authorization header with the real token on
+      # outbound bitbucket.org API calls and git HTTPS operations.
+      name: BITBUCKET_TOKEN
+      proxyManaged: true
+      inject:
+        # REST API calls use Bearer token
+        - domain: api.bitbucket.org
+          scheme: bearer
+        # Git HTTPS operations use HTTP Basic auth
+        # Bitbucket uses "x-token-auth" as the username for personal access tokens
+        - domain: bitbucket.org
+          scheme: basic
+          username: x-token-auth
+
+agentInstructions:
+  content: |
+    ## Bitbucket Authentication
+
+    This kit provides two ways to interact with Bitbucket, both using your personal
+    access token `$BITBUCKET_TOKEN` (proxy-managed — the real token never enters the
+    container):
+
+    ### 1. REST API (Bearer token)
+
+    Bitbucket API is authenticated through the sandbox proxy. The proxy injects your
+    real personal access token into Bearer authorization headers on all requests to
+    `api.bitbucket.org`.
+
+    Use `curl` or any HTTP client to make authenticated API calls:
+
+    ```bash
+    # List repositories in your workspace
+    curl -H "Authorization: Bearer $BITBUCKET_TOKEN" \
+      https://api.bitbucket.org/2.0/repositories/{workspace}
+
+    # Get current user info
+    curl -H "Authorization: Bearer $BITBUCKET_TOKEN" \
+      https://api.bitbucket.org/2.0/user
+    ```
+
+    ### 2. Git over HTTPS
+
+    Git HTTPS operations are authenticated automatically by the proxy injecting HTTP
+    Basic authentication using your personal access token. Just use git normally:
+
+    ```bash
+    # Clone a repository
+    git clone https://bitbucket.org/{workspace}/{repo_slug}.git
+    cd {repo_slug}
+
+    # Make changes and push (proxy injects token automatically)
+    git add .
+    git commit -m "Your changes"
+    git push origin main
+    ```
+
+    The proxy intercepts HTTPS requests to `bitbucket.org` and injects credentials as:
+    ```
+    Authorization: Basic <base64(x-token-auth:$BITBUCKET_TOKEN)>
+    ```
