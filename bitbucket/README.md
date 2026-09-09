@@ -1,6 +1,6 @@
 # Bitbucket API
 
-A mixin kit that wires up Bitbucket authentication for REST API and git HTTPS operations. It handles personal access token (PAT) authentication through the sandbox proxy, so the token is stored on the host and never lands inside the sandbox. Pairs with any base agent (claude, codex, gemini, …).
+A mixin kit that wires up Bitbucket authentication for REST API and git HTTPS operations using **Repository Access Tokens**. It handles token authentication through the sandbox proxy, so the token is stored on the host and never lands inside the sandbox. Pairs with any base agent (claude, codex, gemini, …).
 
 Bitbucket is not one of sbx's built-in auto-sign-on services, so out of the box agents inside a sandbox have no credentials for Bitbucket API or git operations. This kit closes that gap: it declares a `bitbucket` credential and injects it into outbound requests at the proxy. The container only ever sees a proxy-managed placeholder in `BITBUCKET_TOKEN`.
 
@@ -109,22 +109,29 @@ Replace `{workspace}` and `{repo_slug}` with your actual Bitbucket workspace and
 
 ## Setting up credentials
 
-Create a personal access token on your Bitbucket account:
+This kit requires a **Repository Access Token** (not an App password). Repository Access Tokens are specifically designed for Bearer and x-token-auth authentication and work with both the REST API and git HTTPS operations.
 
-1. Visit your Bitbucket account settings: https://bitbucket.org/account/settings/
-2. Navigate to **Personal Bitbucket settings > App passwords** (or **Personal settings > Access management** depending on your Bitbucket version)
-3. Click **Create app password**
+### Create a Repository Access Token
+
+1. Visit your Bitbucket workspace: https://bitbucket.org/{workspace}
+2. Navigate to **Settings > Repository access tokens** (under the workspace or project settings)
+3. Click **Create token**
 4. Give it a label (e.g., "sbx-agent")
 5. Select the required scopes:
-   - `repositories:read` — read repository data
-   - `repositories:write` — create/update repositories
-   - `workspace:read` — read workspace data
-   - Other scopes as needed for your use case
-6. Copy the generated token and store it on the host:
+   - `repository:read` — read repository data
+   - `repository:write` — create/update repositories
+   - `workspace:membership:read` — read workspace membership (for API access)
+6. Choose the expiration date (or set it to never expire)
+7. Copy the generated token and store it on the host:
    ```bash
    sbx secret set bitbucket
    ```
    Then paste your token when prompted.
+
+### Why Repository Access Tokens (not App passwords)?
+
+- **App passwords** authenticate via HTTP Basic using your Bitbucket username and are not compatible with Bearer tokens — this kit requires Bearer tokens for the REST API and x-token-auth for git HTTPS.
+- **Repository Access Tokens** support both Bearer authentication (for REST API v2.0) and x-token-auth HTTP Basic (for git HTTPS), which is what this kit's proxy configuration uses.
 
 ## Cleanup
 

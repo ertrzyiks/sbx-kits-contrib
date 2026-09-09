@@ -2,7 +2,7 @@ schemaVersion: "2"
 kind: mixin
 name: bitbucket
 displayName: Bitbucket
-description: Mixin kit that wires up personal access token (PAT) auth for Bitbucket REST API and git HTTPS operations, so agents can work with Bitbucket repositories and workspaces through authenticated requests.
+description: Mixin kit that wires up Repository Access Token auth for Bitbucket REST API and git HTTPS operations, so agents can work with Bitbucket repositories and workspaces through authenticated requests.
 
 permissions:
   network:
@@ -13,7 +13,7 @@ permissions:
 
 credentials:
   - service: bitbucket
-    description: Bitbucket personal access token (repositories, pipelines, and workspaces scopes). Stored on the host; the sandbox only sees a placeholder and the proxy injects the real value on requests to bitbucket.org.
+    description: Bitbucket Repository Access Token (not App password). Works with Bearer auth for REST API and x-token-auth HTTP Basic for git HTTPS. Stored on the host; the sandbox only sees a placeholder and the proxy injects the real value on requests to bitbucket.org.
     required: true
     apiKey:
       # Set BITBUCKET_TOKEN in the container as a proxy-managed placeholder.
